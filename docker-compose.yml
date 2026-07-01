@@ -1,0 +1,42 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  customer-forwarder:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:8.9.0@sha256:43b0cdaf26edca812a9eafb684ae6101d8f2fd27165345737c39c04a6c7430eb
+    container_name: customer-forwarder
+    restart: unless-stopped
+    mem_limit: ${FORWARDER_MEM_LIMIT:-1g}
+    logging: *default-logging
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LS_JAVA_OPTS: ${LS_JAVA_OPTS:--Xms512m -Xmx512m}
+      CENTRAL_INGEST_URL: ${CENTRAL_INGEST_URL}
+      CUSTOMER_FORWARDER_USERNAME: ${CUSTOMER_FORWARDER_USERNAME}
+      CUSTOMER_FORWARDER_PASSWORD: ${CUSTOMER_FORWARDER_PASSWORD}
+      CENTRAL_CA_CERT: ${CENTRAL_CA_CERT:-/usr/share/logstash/config/certs/central-ca.crt}
+      WINDOWS_HTTP_USERNAME: ${WINDOWS_HTTP_USERNAME}
+      WINDOWS_HTTP_PASSWORD: ${WINDOWS_HTTP_PASSWORD}
+    volumes:
+      - ./config:/usr/share/logstash/config:ro
+      - ./pipeline:/usr/share/logstash/pipeline:ro
+      - ./data/logstash:/usr/share/logstash/data
+      - ./certs:/usr/share/logstash/config/certs:ro
+      - ./http-certs:/usr/share/logstash/config/http:ro
+    ports:
+      - "5514:5514/tcp"
+      - "5514:5514/udp"
+      - "8081:8081/tcp"
+      - "8082:8082/tcp"
+      - "127.0.0.1:9600:9600/tcp"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9600/_node/stats/pipelines >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+      start_period: 60s

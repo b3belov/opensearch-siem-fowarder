@@ -1,0 +1,23 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime state and generated artifacts
+/data/
+/certs/
+/http-certs/
+*.log
+!test/fixtures/*.log
+
+# macOS
+.DS_Store

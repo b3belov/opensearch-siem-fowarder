@@ -1,0 +1,18 @@
+sources:
+  - id: windows-ad
+    dataset: windows-ad
+    parser: windows-ad-json
+    input: winlogbeat-json
+    description: Windows Active Directory security/domain controller events
+
+  - id: windows-sysmon
+    dataset: windows-sysmon
+    parser: windows-sysmon-json
+    input: winlogbeat-json
+    description: Windows Sysmon process, network, file, registry, and driver events
+
+  - id: generic-syslog
+    dataset: generic-syslog
+    parser: generic-syslog
+    input: syslog
+    description: Generic RFC3164/RFC5424 syslog from network, Linux, and appliances

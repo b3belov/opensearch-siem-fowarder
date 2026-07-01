@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["forwarder_name", "queue", "http_collector", "sources"],
+  "additionalProperties": false,
+  "properties": {
+    "forwarder_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"
+    },
+    "queue": {
+      "type": "object",
+      "required": ["max_bytes", "dlq_max_bytes"],
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": { "type": "string", "pattern": "^[1-9][0-9]*(mb|gb)$" },
+        "dlq_max_bytes": { "type": "string", "pattern": "^[1-9][0-9]*(mb|gb)$" }
+      }
+    },
+    "http_collector": {
+      "type": "object",
+      "required": ["tls_enabled", "server_cert", "server_key", "client_ca", "client_authentication", "basic_auth"],
+      "additionalProperties": false,
+      "properties": {
+        "tls_enabled": { "type": "boolean", "const": true },
+        "server_cert": { "type": "string", "pattern": "^/usr/share/logstash/config/http/[A-Za-z0-9._/-]+\\.crt$" },
+        "server_key": { "type": "string", "pattern": "^/usr/share/logstash/config/http/[A-Za-z0-9._/-]+\\.key$" },
+        "client_ca": { "type": "string", "pattern": "^/usr/share/logstash/config/http/[A-Za-z0-9._/-]+\\.crt$" },
+        "client_authentication": { "type": "string", "enum": ["required"] },
+        "basic_auth": {
+          "type": "object",
+          "required": ["username_env", "password_env"],
+          "additionalProperties": false,
+          "properties": {
+            "username_env": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" },
+            "password_env": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["enabled", "listen_host", "port"],
+        "additionalProperties": false,
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "listen_host": { "type": "string", "pattern": "^[A-Za-z0-9._:-]+$" },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+        }
+      }
+    }
+  }
+}

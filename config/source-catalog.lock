@@ -1,0 +1,16 @@
+source_repo_commit: 0be6cf32689256f62e0bdfe235521002d4067ead
+generated_at: '2026-06-11T06:54:58.455552+00:00'
+files:
+- source: source-catalog/sources.yml
+  target: config/source-catalog.yml
+  sha256: 67c2da4011a91dfa950671519baa21ff7f4e5d53b54079fd5fd2c39757617c8b
+- source: source-catalog/sources.schema.json
+  target: config/source-catalog.schema.json
+  sha256: 4ed109d7aa7a60d538f35c84ca71bf2c1e0c1b2d6e3bd400a5fa5bf8c2011f2f
+- source: scripts/lib/endpoint_validation.py
+  target: scripts/endpoint_validation.py
+  sha256: 6569013e49e8c55ac7501cc37df2926ecdf0c4845886e5b05233bf658842659d
+supported_source_ids:
+- generic-syslog
+- windows-ad
+- windows-sysmon

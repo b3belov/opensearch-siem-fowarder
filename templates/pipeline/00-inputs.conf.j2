@@ -1,0 +1,46 @@
+{% for source in sources %}
+{% if source.input == "syslog" %}
+input {
+  syslog {
+    id => "input-{{ source.id }}"
+    host => "{{ source.listen_host }}"
+    port => {{ source.port }}
+    ecs_compatibility => "v8"
+    add_field => {
+      "[@metadata][forwarder][source_id]" => "{{ source.id }}"
+      "[@metadata][forwarder][dataset]" => "{{ source.dataset }}"
+      "[@metadata][forwarder][parser]" => "{{ source.parser }}"
+      "[@metadata][forwarder][observer_name]" => "{{ source.forwarder_name }}"
+    }
+  }
+}
+{% elif source.input == "winlogbeat-json" %}
+input {
+  http {
+    id => "input-{{ source.id }}"
+    host => "{{ source.listen_host }}"
+    port => {{ source.port }}
+    codec => "json"
+    max_content_length => 1048576
+    user => "{{ http_collector.basic_auth.username_ref }}"
+    password => "{{ http_collector.basic_auth.password_ref }}"
+    ssl_enabled => true
+    ssl_certificate => "{{ http_collector.server_cert }}"
+    ssl_key => "{{ http_collector.server_key }}"
+    ssl_certificate_authorities => ["{{ http_collector.client_ca }}"]
+    ssl_client_authentication => "{{ http_collector.client_authentication }}"
+    add_field => {
+      "[@metadata][forwarder][source_id]" => "{{ source.id }}"
+      "[@metadata][forwarder][dataset]" => "{{ source.dataset }}"
+      "[@metadata][forwarder][parser]" => "{{ source.parser }}"
+      "[@metadata][forwarder][observer_name]" => "{{ source.forwarder_name }}"
+    }
+  }
+}
+{% endif %}
+{% endfor %}
+output {
+  pipeline {
+    send_to => "parse-and-normalize"
+  }
+}

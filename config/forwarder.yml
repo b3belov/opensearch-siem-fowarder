@@ -1,0 +1,26 @@
+forwarder_name: customer-forwarder-01
+queue:
+  max_bytes: 8gb
+  dlq_max_bytes: 512mb
+http_collector:
+  tls_enabled: true
+  server_cert: /usr/share/logstash/config/http/server.crt
+  server_key: /usr/share/logstash/config/http/server.pkcs8.key
+  client_ca: /usr/share/logstash/config/http/client-ca.crt
+  client_authentication: required
+  basic_auth:
+    username_env: WINDOWS_HTTP_USERNAME
+    password_env: WINDOWS_HTTP_PASSWORD
+sources:
+  generic-syslog:
+    enabled: true
+    listen_host: 0.0.0.0
+    port: 5514
+  windows-ad:
+    enabled: true
+    listen_host: 0.0.0.0
+    port: 8081
+  windows-sysmon:
+    enabled: true
+    listen_host: 0.0.0.0
+    port: 8082
