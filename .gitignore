@@ -14,6 +14,7 @@ venv/
 
 # Runtime state and generated artifacts
 /data/
+/handoff.txt
 /certs/
 /http-certs/
 *.log

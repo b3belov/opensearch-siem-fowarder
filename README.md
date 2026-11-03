@@ -31,6 +31,123 @@ checksums, and supported IDs for customer handoff.
 
 ## Configure
 
+### Initial setup from a wizard handoff
+
+Accept a handoff only from your trusted SIEM operator. The
+`SIEM-FORWARDER-V1:` line carries executable Logstash configuration. Base64
+provides transport encoding. Keep the handoff and the separately delivered
+password private.
+
+Use the Python dependencies from **Validate And Render**, then prepare the
+repository's existing Compose secret file.
+
+```bash
+(umask 077; touch .env)
+chmod 600 .env
+${EDITOR:-vi} .env
+```
+
+Set `CUSTOMER_FORWARDER_PASSWORD` in that file using the password from the
+operator. Ledger mode gets its central destination and username from the
+handoff. Run the installer, paste the complete line at its prompt, and press
+Enter.
+
+```bash
+.venv/bin/python scripts/configure-forwarder.py
+```
+
+For a saved handoff, either invocation below reads the ledger without putting
+it in the command line.
+
+```bash
+.venv/bin/python scripts/configure-forwarder.py --file handoff.txt
+.venv/bin/python scripts/configure-forwarder.py < handoff.txt
+```
+
+The installer accepts up to 4 MiB of input and 8 MiB of decompressed archive
+data. It stores private revisions in `data/forwarder-handoff/` and mounts
+`data/logstash/` as Logstash's data directory. With Docker available, it checks
+queue mount permissions and validates the staged configuration with the pinned
+Logstash image before switching the active Compose file. If Docker is
+unavailable, rerun the installer on the deployment host before starting the
+service. The installer stops if it finds an incomplete installation or a manual
+deployment whose customer identity it cannot verify.
+
+The installer retains the original pipeline with each revision. The running
+copy uses the pinned HTTP output plugin's `cacert` setting for the supplied CA
+and keeps full TLS verification enabled.
+
+### Apply a regenerated ledger
+
+Run the same installer with the regenerated ledger. It compares the customer
+slug and HTTP username against the active pipeline and stops if either differs
+or cannot be verified. The installer reuses `CUSTOMER_FORWARDER_PASSWORD` from
+the existing `.env` binding. If the binding is missing, restore the existing
+password to the protected file before retrying. Customer changes and credential
+rotation are separate operator workflows.
+
+Review the listed settings, endpoint, listener, and CA changes, then answer
+`y` to confirm. For a noninteractive run, review the output first and rerun
+with `--yes` to confirm. An identical configuration reports that it is already
+current, even if the handoff README changed.
+
+Updates retain the active data mount and its queued events, including mounts
+from earlier ledger installations. They also keep unrelated Compose settings.
+The installer prints the path to a protected snapshot of the previous Compose
+file, which still references the retained configuration files. To roll back,
+reapply the earlier ledger with the same password binding. If the ledger is
+unavailable, restore the saved Compose snapshot to
+`data/forwarder-handoff/compose.yml` while the installer is idle, then run the
+printed reload command.
+
+### Start, reload, and confirm delivery
+
+Run the start or reload command printed by the installer. Then check service
+health using the ledger Compose file.
+
+```bash
+docker compose --project-directory . -f data/forwarder-handoff/compose.yml ps
+```
+
+From an authorized Linux sender, use a syslog port and protocol printed by the
+installer. This example uses TCP and the util-linux version of `logger`.
+
+```bash
+read -r -p 'Forwarder host: ' forwarder_host
+read -r -p 'Published syslog TCP port: ' syslog_port
+probe_id="siem-handoff-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+logger --rfc3164 --tcp --server "$forwarder_host" --port "$syslog_port" --tag siem-handoff "$probe_id"
+printf 'Send this probe ID to the central SIEM operator: %s\n' "$probe_id"
+```
+
+For a UDP-only listener, use `--udp` and its published port. Give the SIEM
+operator the probe ID and customer identifier. Ask them to confirm the event
+arrived under the expected customer and source ID.
+
+### Disconnect the ledger forwarder
+
+On the deployment host, use the same Docker context that runs the forwarder.
+Run the following command and confirm the removal. Use `--yes` to confirm
+noninteractively.
+
+```bash
+.venv/bin/python scripts/configure-forwarder.py --disconnect
+```
+
+Disconnect stops and removes the ledger-managed container and deletes its
+active Compose file, staged configuration, and rollback copies. It removes
+`CUSTOMER_FORWARDER_PASSWORD` from the shared `.env` and preserves the other
+entries, persistent queues, and any original handoff file you saved outside
+the installer state. It requires Docker access to check the
+container's ownership and leaves manual deployments alone. If cleanup is
+interrupted, run the disconnect command again to finish.
+
+Before onboarding again, handle any retained queue data separately. The
+installer refuses to attach a new ledger to leftover queue state whose
+customer it cannot verify.
+
+### Configure manually
+
 Copy `.env.example` to `.env` and set:
 
 ```text
@@ -66,16 +183,23 @@ Edit `config/forwarder.yml` to choose enabled source inputs and ports.
 
 ## Validate And Render
 
+Install these dependencies for either workflow.
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 pip install --require-hashes -r requirements.lock
+```
+
+For manual configuration, validate and render the source catalog and settings.
+
+```bash
 PYTHONPATH=scripts python scripts/validate-config.py
 PYTHONPATH=scripts python scripts/render-config.py
 PYTHONPATH=scripts python scripts/validate-env.py --env-file .env
 ```
 
-## Run
+## Run the manual configuration
 
 ```bash
 docker compose up -d
@@ -117,7 +241,7 @@ and fails if the output pipeline does not advance or if queue depth grows
 unexpectedly. Use `--skip-monitor` only when the Logstash monitoring API is not
 available.
 
-## Central Handoff And First-Run Proof
+## Manual Handoff And First-Run Proof
 
 The central SIEM owner must provide the customer with:
 
